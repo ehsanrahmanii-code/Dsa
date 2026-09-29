@@ -32,7 +32,8 @@ jobs:
         sudo apt-get install -y \
           autoconf libtool pkg-config zlib1g-dev libncurses-dev \
           cmake libffi-dev libssl-dev \
-          build-essential ccache git unzip
+          build-essential ccache git unzip \
+          gettext autopoint
 
     - name: Install Buildozer
       run: |
