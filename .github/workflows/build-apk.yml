@@ -41,6 +41,17 @@ jobs:
         pip install buildozer==1.6.0
         pip install Cython==0.29.37
 
+    - name: Pre-clone and patch python-for-android
+      run: |
+        mkdir -p ~/.buildozer/android/platform
+        cd ~/.buildozer/android/platform
+        git clone --depth 1 --branch master https://github.com/kivy/python-for-android.git
+        cd python-for-android
+        # Fix: pin pip to 24.3.1 to avoid open_rich_spinner ImportError in pip 25+
+        sed -i 's/pip install -U pip/pip install pip==24.3.1/' pythonforandroid/build.py
+        echo "Patched p4a build.py to pin pip version"
+        grep "pip install" pythonforandroid/build.py | head -5
+
     - name: Cache Buildozer
       uses: actions/cache@v4
       with:
