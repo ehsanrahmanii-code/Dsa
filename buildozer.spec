@@ -12,8 +12,8 @@ source.dir = .
 version = 0.1
 
 # Application requirements
-# These are the Python packages that need recipes in python-for-android
-requirements = python3,flask,numpy,pandas,requests,sqlite3,websocket-client
+# Pin python3 to 3.11 for pandas/numpy compatibility
+requirements = python3==3.11,flask,numpy,pandas,requests,sqlite3,websocket-client
 
 # Use the webview bootstrap (native Android WebView, no Kivy/SDL2 needed)
 bootstrap = webview
@@ -33,10 +33,6 @@ fullscreen = 0
 # Android entry point
 android.entrypoint = main.py
 
-# Presplash and icon (use defaults if not provided)
-# presplash.filename = presplash.png
-# icon.filename = icon.png
-
 # Build settings
 log_level = 2
 warn_on_root = 1
@@ -45,7 +41,7 @@ warn_on_root = 1
 source.exclude_dirs = tests,docs,examples,build,dist,.git,__pycache__
 source.exclude_patterns = *.pyc,*.pyo,*.so,*.o
 
-# p4a settings
+# p4a settings - use develop for AAB support
 p4a.branch = develop
 
 # Build options

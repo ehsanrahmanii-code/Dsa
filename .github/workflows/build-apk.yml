@@ -9,47 +9,28 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
+      env:
+        JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        ANDROID_HOME: /home/user/.buildozer/android/platform/android-sdk
+        ANDROID_NDK_HOME: /home/user/.buildozer/android/platform/android-ndk-r28c
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Set up Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Install system dependencies
+    - name: Install additional system dependencies
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y \
-          autoconf libtool pkg-config zlib1g-dev libncurses-dev \
-          cmake libffi-dev libssl-dev \
-          build-essential ccache git unzip \
-          gettext autopoint
+        apt-get update -y
+        apt-get install -y gettext autopoint
 
     - name: Install Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer==1.6.0
         pip install Cython==0.29.37
-
-    - name: Cache Buildozer
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.buildozer
-          .buildozer
-        key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          buildozer-${{ runner.os }}-
 
     - name: Build APK
       run: |
