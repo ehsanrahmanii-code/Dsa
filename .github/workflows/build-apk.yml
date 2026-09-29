@@ -51,23 +51,47 @@ jobs:
         restore-keys: |
           buildozer-${{ runner.os }}-
 
-    - name: Patch python-for-android (fix pip open_rich_spinner error)
+    - name: Patch p4a and create pip compatibility shim
       run: |
-        # Remove any cached/old p4a and re-clone fresh
+        # Remove cached p4a and re-clone fresh
         rm -rf ~/.buildozer/android/platform/python-for-android
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
         git clone --depth 1 --branch master https://github.com/kivy/python-for-android.git
         cd python-for-android
-        # Fix 1: Pin pip to 24.3.1 in build venv (pip 25+ removed open_rich_spinner)
+
+        # Patch 1: Pin pip to 24.3.1 in build venv (avoids open_rich_spinner removal in pip 25+)
         sed -i 's/pip install -U pip/pip install pip==24.3.1/' pythonforandroid/build.py
-        # Fix 2: Also patch any direct imports of open_rich_spinner if they exist
-        grep -rn "open_rich_spinner" pythonforandroid/ || echo "No direct open_rich_spinner imports found"
+
+        # Patch 2: Create a sitecustomize.py shim that adds open_rich_spinner back
+        # This runs in the build venv's Python and fixes the ImportError
+        # We place it where the build venv will pick it up via PYTHONPATH
+        mkdir -p /home/runner/.p4a_shim
+        cat > /home/runner/.p4a_shim/sitecustomize.py << 'EOF'
+        import sys
+        import importlib
+
+        # Monkey-patch pip to add back open_rich_spinner if missing
+        try:
+            from pip._internal.cli import spinners
+            if not hasattr(spinners, 'open_rich_spinner'):
+                # open_rich_spinner was removed in pip 25+, alias to open_spinner
+                spinners.open_rich_spinner = getattr(spinners, 'open_spinner', lambda *a, **kw: None)
+        except ImportError:
+            pass
+        EOF
+
+        # Set PYTHONPATH to include our shim directory
+        echo "PYTHONPATH=/home/runner/.p4a_shim" >> $GITHUB_ENV
+
         echo "=== Patched build.py pip lines ==="
         grep "pip install" pythonforandroid/build.py | head -5
+        echo "=== Created sitecustomize.py shim ==="
+        cat /home/runner/.p4a_shim/sitecustomize.py
 
     - name: Build APK
       run: |
+        export PYTHONPATH=/home/runner/.p4a_shim:$PYTHONPATH
         buildozer android debug
 
     - name: Upload APK
