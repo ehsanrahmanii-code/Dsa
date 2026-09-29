@@ -46,7 +46,7 @@ source.exclude_dirs = tests,docs,examples,build,dist,.git,__pycache__
 source.exclude_patterns = *.pyc,*.pyo,*.so,*.o
 
 # p4a settings
-p4a.branch = stable
+p4a.branch = develop
 
 # Build options
 android.accept_sdk_license = True
