@@ -1,0 +1,84 @@
+name: Build TITAN APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Set up Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y \
+          autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
+          libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev \
+          build-essential ccache git unzip
+
+    - name: Install Buildozer
+      run: |
+        pip install --upgrade pip
+        pip install buildozer==1.6.0
+        pip install Cython==0.29.37
+
+    - name: Cache Buildozer
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.buildozer
+          .buildozer
+        key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          buildozer-${{ runner.os }}-
+
+    - name: Build APK
+      run: |
+        buildozer android debug
+      env:
+        JAVA_HOME: /usr/lib/jvm/temurin-17-amd64
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: titan-apk
+        path: bin/*.apk
+        if-no-files-found: error
+
+    - name: Release APK
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v0.1-${{ github.run_number }}
+        files: bin/*.apk
+        name: TITAN APK Build ${{ github.run_number }}
+        body: |
+          TITAN Trading Dashboard APK
+          
+          Built from commit: ${{ github.sha }}
+          
+          ## Installation
+          1. Download the .apk file to your Android phone
+          2. Enable "Install from unknown sources" in settings
+          3. Open the .apk file to install
+          4. Launch TITAN - the dashboard will open automatically
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
