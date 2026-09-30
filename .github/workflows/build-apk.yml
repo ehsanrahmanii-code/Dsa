@@ -72,6 +72,13 @@ jobs:
     - name: Build APK
       run: |
         export SETUPTOOLS_USE_DISTUTILS=stdlib
+        # Create stub libuuid.so so _uuid module links (libuuid not in Android NDK)
+        NDK_SYSROOT=/home/runner/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib
+        for arch in aarch64-linux-android arm-linux-androideabi; do
+          mkdir -p "$NDK_SYSROOT/$arch/26"
+          touch "$NDK_SYSROOT/$arch/26/libuuid.so"
+        done
+        echo "=== Created stub libuuid.so ==="
         buildozer android debug
 
     - name: Upload APK
