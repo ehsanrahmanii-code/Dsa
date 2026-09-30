@@ -65,10 +65,17 @@ jobs:
         cd python-for-android
         # Pin pip to 24.3.1 in build venv
         sed -i 's/pip install -U pip/pip install pip==24.3.1/' pythonforandroid/build.py
-        echo "=== Patched build.py pip lines ==="
-        grep "pip install" pythonforandroid/build.py | head -5
-        echo "=== p4a version ==="
-        cat pythonforandroid/__init__.py | head -5
+        # Patch python3 recipe to disable _uuid module (libuuid not available in Android NDK)
+        cat >> pythonforandroid/recipes/python3/__init__.py << 'PYEOF'
+
+    def prebuild_arch(self, arch):
+        super().prebuild_arch(arch)
+        # Disable _uuid module - libuuid is not available in Android NDK
+        setup_local = Path(self.get_build_dir(arch.arch)) / 'Modules' / 'Setup.local'
+        with open(setup_local, 'a') as f:
+            f.write('\n*disabled*\n_uuid\n')
+PYEOF
+        echo "=== Patched python3 recipe to disable _uuid ==="
 
     - name: Build APK
       run: |
