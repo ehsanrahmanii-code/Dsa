@@ -15,10 +15,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python 3.11.9 (bundles pip 24.x, avoids open_rich_spinner issue)
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.11.9'
 
     - name: Set up Java JDK
       uses: actions/setup-java@v4
@@ -35,9 +35,9 @@ jobs:
           build-essential ccache git unzip \
           gettext autopoint
 
-    - name: Install Buildozer
+    - name: Install Buildozer and pin pip/setuptools
       run: |
-        pip install --upgrade pip
+        python -m pip install pip==24.3.1
         pip install buildozer==1.6.0
         pip install Cython==0.29.37
         pip install setuptools==69.5.1
@@ -48,9 +48,9 @@ jobs:
         path: |
           ~/.buildozer
           .buildozer
-        key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+        key: buildozer-3119-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
-          buildozer-${{ runner.os }}-
+          buildozer-3119-${{ runner.os }}-
 
     - name: Pre-clone and patch python-for-android
       run: |
@@ -69,29 +69,26 @@ jobs:
         export SETUPTOOLS_USE_DISTUTILS=stdlib
 
         # Background watcher: patch pip's spinners.py as soon as the venv appears
-        # This fixes the open_rich_spinner ImportError in pip 25+
         (
           while true; do
-            SPINNER=$(find /home/runner/work/Dsa/Dsa/.buildozer -path "*/build/venv/lib/python3.11/site-packages/pip/_internal/cli/spinners.py" 2>/dev/null | head -1)
-            if [ -n "$SPINNER" ]; then
-              if ! grep -q "open_rich_spinner" "$SPINNER" 2>/dev/null; then
-                echo "" >> "$SPINNER"
-                echo "def open_rich_spinner(*args, **kwargs):" >> "$SPINNER"
-                echo "    return open_spinner(*args, **kwargs)" >> "$SPINNER"
-                echo "[WATCHER] Patched spinners.py: $SPINNER"
+            for SPINNER in /home/runner/work/Dsa/Dsa/.buildozer/android/platform/build-*/build/venv/lib/python3.11/site-packages/pip/_internal/cli/spinners.py; do
+              if [ -f "$SPINNER" ]; then
+                if ! grep -q "def open_rich_spinner" "$SPINNER" 2>/dev/null; then
+                  echo "" >> "$SPINNER"
+                  echo "def open_rich_spinner(*args, **kwargs):" >> "$SPINNER"
+                  echo "    return open_spinner(*args, **kwargs)" >> "$SPINNER"
+                  echo "[WATCHER] Patched spinners.py: $SPINNER"
+                fi
               fi
-              break
-            fi
-            sleep 0.3
+            done
+            sleep 0.2
           done
         ) &
         WATCHER_PID=$!
 
-        # Run buildozer
         buildozer android debug
         BUILD_EXIT=$?
 
-        # Clean up watcher
         kill $WATCHER_PID 2>/dev/null || true
         exit $BUILD_EXIT
 
