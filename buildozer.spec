@@ -43,8 +43,8 @@ source.exclude_dirs = tests,docs,examples,build,dist,.git,__pycache__
 source.exclude_patterns = *.pyc,*.pyo,*.so,*.o
 
 # p4a settings - use v2024.01.21 release (stable, Python 3.11, AAB support)
-# p4a is pre-downloaded and patched in the workflow
-p4a.url = https://github.com/kivy/python-for-android/archive/refs/tags/v2024.01.21.tar.gz
+# p4a is pre-downloaded and patched in the workflow to a local directory
+p4a.source_dir = /home/runner/.buildozer/android/platform/python-for-android
 
 # Build options
 android.accept_sdk_license = True
