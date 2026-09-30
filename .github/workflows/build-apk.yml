@@ -15,7 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.11.9 (bundles pip 24.x, avoids open_rich_spinner issue)
+    - name: Set up Python 3.11.9
       uses: actions/setup-python@v5
       with:
         python-version: '3.11.9'
@@ -35,7 +35,7 @@ jobs:
           build-essential ccache git unzip \
           gettext autopoint
 
-    - name: Install Buildozer and pin pip/setuptools
+    - name: Install Buildozer
       run: |
         python -m pip install pip==24.3.1
         pip install buildozer==1.6.0
@@ -48,49 +48,32 @@ jobs:
         path: |
           ~/.buildozer
           .buildozer
-        key: buildozer-3119-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+        key: buildozer-3119-v2024-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
-          buildozer-3119-${{ runner.os }}-
+          buildozer-3119-v2024-${{ runner.os }}-
 
-    - name: Pre-clone and patch python-for-android
+    - name: Pre-download and patch p4a v2024.01.21
       run: |
         rm -rf ~/.buildozer/android/platform/python-for-android
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
-        git clone --depth 1 --branch master https://github.com/kivy/python-for-android.git
+        # Download p4a v2024.01.21 (stable release with Python 3.11 + AAB support)
+        wget -q https://github.com/kivy/python-for-android/archive/refs/tags/v2024.01.21.tar.gz -O p4a.tar.gz
+        tar xzf p4a.tar.gz
+        mv python-for-android-2024.01.21 python-for-android
+        rm p4a.tar.gz
         cd python-for-android
-        # Pin pip to 24.3.1 in build venv (pip 25+ removed open_rich_spinner)
+        # Pin pip to 24.3.1 in build venv
         sed -i 's/pip install -U pip/pip install pip==24.3.1/' pythonforandroid/build.py
         echo "=== Patched build.py pip lines ==="
         grep "pip install" pythonforandroid/build.py | head -5
+        echo "=== p4a version ==="
+        cat pythonforandroid/__init__.py | head -5
 
     - name: Build APK
       run: |
         export SETUPTOOLS_USE_DISTUTILS=stdlib
-
-        # Background watcher: patch pip's spinners.py as soon as the venv appears
-        (
-          while true; do
-            for SPINNER in /home/runner/work/Dsa/Dsa/.buildozer/android/platform/build-*/build/venv/lib/python3.11/site-packages/pip/_internal/cli/spinners.py; do
-              if [ -f "$SPINNER" ]; then
-                if ! grep -q "def open_rich_spinner" "$SPINNER" 2>/dev/null; then
-                  echo "" >> "$SPINNER"
-                  echo "def open_rich_spinner(*args, **kwargs):" >> "$SPINNER"
-                  echo "    return open_spinner(*args, **kwargs)" >> "$SPINNER"
-                  echo "[WATCHER] Patched spinners.py: $SPINNER"
-                fi
-              fi
-            done
-            sleep 0.2
-          done
-        ) &
-        WATCHER_PID=$!
-
         buildozer android debug
-        BUILD_EXIT=$?
-
-        kill $WATCHER_PID 2>/dev/null || true
-        exit $BUILD_EXIT
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

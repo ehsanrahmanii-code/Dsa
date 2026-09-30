@@ -42,8 +42,9 @@ warn_on_root = 0
 source.exclude_dirs = tests,docs,examples,build,dist,.git,__pycache__
 source.exclude_patterns = *.pyc,*.pyo,*.so,*.o
 
-# p4a settings - p4a is pre-cloned and patched in the workflow
-# Do NOT set p4a.branch here - it causes buildozer to re-clone and overwrite patches
+# p4a settings - use v2024.01.21 release (stable, Python 3.11, AAB support)
+# p4a is pre-downloaded and patched in the workflow
+p4a.url = https://github.com/kivy/python-for-android/archive/refs/tags/v2024.01.21.tar.gz
 
 # Build options
 android.accept_sdk_license = True
