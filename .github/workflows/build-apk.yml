@@ -52,49 +52,48 @@ jobs:
         restore-keys: |
           buildozer-${{ runner.os }}-
 
-    - name: Patch p4a and create pip compatibility shim
+    - name: Pre-clone and patch python-for-android
       run: |
-        # Remove cached p4a and re-clone fresh
         rm -rf ~/.buildozer/android/platform/python-for-android
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
         git clone --depth 1 --branch master https://github.com/kivy/python-for-android.git
         cd python-for-android
-
-        # Patch 1: Pin pip to 24.3.1 in build venv (avoids open_rich_spinner removal in pip 25+)
+        # Pin pip to 24.3.1 in build venv (pip 25+ removed open_rich_spinner)
         sed -i 's/pip install -U pip/pip install pip==24.3.1/' pythonforandroid/build.py
-
-        # Patch 2: Create a sitecustomize.py shim that adds open_rich_spinner back
-        # This runs in the build venv's Python and fixes the ImportError
-        # We place it where the build venv will pick it up via PYTHONPATH
-        mkdir -p /home/runner/.p4a_shim
-        cat > /home/runner/.p4a_shim/sitecustomize.py << 'EOF'
-        import sys
-        import importlib
-
-        # Monkey-patch pip to add back open_rich_spinner if missing
-        try:
-            from pip._internal.cli import spinners
-            if not hasattr(spinners, 'open_rich_spinner'):
-                # open_rich_spinner was removed in pip 25+, alias to open_spinner
-                spinners.open_rich_spinner = getattr(spinners, 'open_spinner', lambda *a, **kw: None)
-        except ImportError:
-            pass
-        EOF
-
-        # Set PYTHONPATH to include our shim directory
-        echo "PYTHONPATH=/home/runner/.p4a_shim" >> $GITHUB_ENV
-
         echo "=== Patched build.py pip lines ==="
         grep "pip install" pythonforandroid/build.py | head -5
-        echo "=== Created sitecustomize.py shim ==="
-        cat /home/runner/.p4a_shim/sitecustomize.py
 
     - name: Build APK
       run: |
-        export PYTHONPATH=/home/runner/.p4a_shim:$PYTHONPATH
         export SETUPTOOLS_USE_DISTUTILS=stdlib
+
+        # Background watcher: patch pip's spinners.py as soon as the venv appears
+        # This fixes the open_rich_spinner ImportError in pip 25+
+        (
+          while true; do
+            SPINNER=$(find /home/runner/work/Dsa/Dsa/.buildozer -path "*/build/venv/lib/python3.11/site-packages/pip/_internal/cli/spinners.py" 2>/dev/null | head -1)
+            if [ -n "$SPINNER" ]; then
+              if ! grep -q "open_rich_spinner" "$SPINNER" 2>/dev/null; then
+                echo "" >> "$SPINNER"
+                echo "def open_rich_spinner(*args, **kwargs):" >> "$SPINNER"
+                echo "    return open_spinner(*args, **kwargs)" >> "$SPINNER"
+                echo "[WATCHER] Patched spinners.py: $SPINNER"
+              fi
+              break
+            fi
+            sleep 0.3
+          done
+        ) &
+        WATCHER_PID=$!
+
+        # Run buildozer
         buildozer android debug
+        BUILD_EXIT=$?
+
+        # Clean up watcher
+        kill $WATCHER_PID 2>/dev/null || true
+        exit $BUILD_EXIT
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
