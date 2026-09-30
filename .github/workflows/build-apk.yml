@@ -40,6 +40,7 @@ jobs:
         pip install --upgrade pip
         pip install buildozer==1.6.0
         pip install Cython==0.29.37
+        pip install setuptools==69.5.1
 
     - name: Cache Buildozer
       uses: actions/cache@v4
@@ -92,6 +93,7 @@ jobs:
     - name: Build APK
       run: |
         export PYTHONPATH=/home/runner/.p4a_shim:$PYTHONPATH
+        export SETUPTOOLS_USE_DISTUTILS=stdlib
         buildozer android debug
 
     - name: Upload APK
