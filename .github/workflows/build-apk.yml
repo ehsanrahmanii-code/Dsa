@@ -33,7 +33,7 @@ jobs:
           autoconf libtool pkg-config zlib1g-dev libncurses-dev \
           cmake libffi-dev libssl-dev \
           build-essential ccache git unzip \
-          gettext autopoint
+          gettext autopoint uuid-dev
 
     - name: Install Buildozer
       run: |

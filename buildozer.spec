@@ -14,7 +14,7 @@ version = 0.1
 # Application requirements
 # Pin Python to 3.11 for pandas/numpy compatibility (3.14 is too new)
 # Include Flask dependencies that need recipes or pip install
-requirements = python3==3.11.16,hostpython3==3.11.16,flask,numpy,pandas,requests,sqlite3,websocket-client,markupsafe,jinja2,werkzeug,click,itsdangerous,blinker,python-dateutil,pytz,six
+requirements = python3==3.11.5,hostpython3==3.11.5,flask,numpy,pandas,requests,sqlite3,websocket-client,markupsafe,jinja2,werkzeug,click,itsdangerous,blinker,python-dateutil,pytz,six
 
 # Use the webview bootstrap (native Android WebView, no Kivy/SDL2 needed)
 p4a.bootstrap = webview
