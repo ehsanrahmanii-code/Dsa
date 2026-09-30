@@ -42,8 +42,8 @@ warn_on_root = 0
 source.exclude_dirs = tests,docs,examples,build,dist,.git,__pycache__
 source.exclude_patterns = *.pyc,*.pyo,*.so,*.o
 
-# p4a settings - master branch is stable, supports Python 3.11/3.12 + AAB
-p4a.branch = master
+# p4a settings - p4a is pre-cloned and patched in the workflow
+# Do NOT set p4a.branch here - it causes buildozer to re-clone and overwrite patches
 
 # Build options
 android.accept_sdk_license = True
